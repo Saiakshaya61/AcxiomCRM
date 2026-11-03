@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}User Management - AcxiomCRM{% endblock %}
+{% block page_title %}User & Role Management (Admin){% endblock %}
+
+{% block content %}
+<!-- Toolbar -->
+<div class="toolbar">
+    <div>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">
+            Manage team accounts, assign roles (Admin, Manager, Sales Executive), and control access permissions.
+        </p>
+    </div>
+    <button class="btn btn-primary" onclick="openModal('addUserModal')">
+        <i class="fa-solid fa-user-plus"></i> Add New User
+    </button>
+</div>
+
+<!-- Users List Table -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fa-solid fa-user-gear" style="color: var(--primary-blue);"></i> System Users ({{ users|length }})</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>User Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Failed Logins</th>
+                        <th>Created</th>
+                        <th style="text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr>
+                        <td><strong>{{ u.name }}</strong></td>
+                        <td>{{ u.email }}</td>
+                        <td>{{ u.phone or '-' }}</td>
+                        <td>
+                            {% if u.role.name == 'Admin' %}
+                            <span class="badge badge-violet"><i class="fa-solid fa-crown"></i> Admin</span>
+                            {% elif u.role.name == 'Manager' %}
+                            <span class="badge badge-info"><i class="fa-solid fa-user-tie"></i> Manager</span>
+                            {% else %}
+                            <span class="badge badge-warning"><i class="fa-solid fa-user"></i> Sales Executive</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if u.is_active %}
+                            <span class="badge badge-success">Active</span>
+                            {% else %}
+                            <span class="badge badge-danger">Deactivated</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if u.failed_attempts >= 5 %}
+                            <span class="badge badge-danger" title="Account locked due to 5 failed attempts">Locked ({{ u.failed_attempts }})</span>
+                            {% else %}
+                            {{ u.failed_attempts }}
+                            {% endif %}
+                        </td>
+                        <td style="color: var(--text-muted); font-size: 0.82rem;">
+                            {{ u.created_at.strftime('%Y-%m-%d') if u.created_at else '-' }}
+                        </td>
+                        <td style="text-align: right; white-space: nowrap;">
+                            <!-- Edit User -->
+                            <button class="btn btn-secondary btn-sm" onclick="openEditUserModal({{ u.id }}, '{{ u.name|escape }}', '{{ u.email|escape }}', '{{ u.phone|escape }}', {{ u.role_id }})">
+                                <i class="fa-solid fa-pen-to-square"></i> Edit
+                            </button>
+
+                            <!-- Unlock Account if locked or reset attempts -->
+                            {% if u.failed_attempts > 0 or not u.is_active %}
+                            <form action="{{ url_for('unlock_user', id=u.id) }}" method="POST" style="display: inline;">
+                                <button type="submit" class="btn btn-success btn-sm" title="Unlock account & reset failed attempts">
+                                    <i class="fa-solid fa-lock-open"></i> Unlock
+                                </button>
+                            </form>
+                            {% endif %}
+
+                            <!-- Activate / Deactivate Toggle (Cannot deactivate yourself) -->
+                            {% if u.id != session.get('user_id') %}
+                            <form action="{{ url_for('toggle_user_status', id=u.id) }}" method="POST" style="display: inline;">
+                                <button type="submit" class="btn {% if u.is_active %}btn-danger{% else %}btn-success{% endif %} btn-sm" title="Toggle active status">
+                                    {% if u.is_active %}<i class="fa-solid fa-user-slash"></i> Deactivate{% else %}<i class="fa-solid fa-user-check"></i> Activate{% endif %}
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ==============================================
+     MODAL 1: ADD USER
+     ============================================== -->
+<div class="modal-overlay" id="addUserModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-user-plus" style="color: var(--primary-blue);"></i> Add New User</h3>
+            <button class="modal-close" onclick="closeModal('addUserModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form action="{{ url_for('add_user') }}" method="POST">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Full Name <span class="required">*</span></label>
+                        <input type="text" name="name" class="form-control" required placeholder="Jane Smith">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Work Email <span class="required">*</span></label>
+                        <input type="email" name="email" class="form-control" required placeholder="jane@company.com">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Phone Number <span class="required">*</span></label>
+                        <input type="tel" name="phone" class="form-control" required placeholder="+1 (555) 345-6789">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Role <span class="required">*</span></label>
+                        <select name="role_id" class="form-control" required>
+                            {% for r in roles %}
+                            <option value="{{ r.id }}" {% if r.name == 'Sales Executive' %}selected{% endif %}>{{ r.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Temporary Password <span class="required">*</span></label>
+                        <input type="password" name="password" class="form-control" minlength="6" required placeholder="At least 6 chars">
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addUserModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Create User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ==============================================
+     MODAL 2: EDIT USER
+     ============================================== -->
+<div class="modal-overlay" id="editUserModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-pen-to-square" style="color: var(--accent-violet);"></i> Edit User Profile</h3>
+            <button class="modal-close" onclick="closeModal('editUserModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="editUserForm" method="POST">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Full Name <span class="required">*</span></label>
+                        <input type="text" id="edit_u_name" name="name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Phone Number <span class="required">*</span></label>
+                        <input type="tel" id="edit_u_phone" name="phone" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Role <span class="required">*</span></label>
+                        <select id="edit_u_role_id" name="role_id" class="form-control" required>
+                            {% for r in roles %}
+                            <option value="{{ r.id }}">{{ r.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editUserModal')">Cancel</button>
+                    <button type="submit" class="btn btn-violet"><i class="fa-solid fa-check"></i> Update User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openEditUserModal(id, name, email, phone, roleId) {
+    document.getElementById('editUserForm').action = "/users/edit/" + id;
+    document.getElementById('edit_u_name').value = name;
+    document.getElementById('edit_u_phone').value = phone;
+    document.getElementById('edit_u_role_id').value = roleId;
+    openModal('editUserModal');
+}
+</script>
+{% endblock %}
+

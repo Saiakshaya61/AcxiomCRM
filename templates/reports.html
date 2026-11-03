@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Reports - AcxiomCRM{% endblock %}
+{% block page_title %}Analytics & Business Reports{% endblock %}
+
+{% block content %}
+<!-- Reports Navigation Pills -->
+<div class="card" style="margin-bottom: 20px;">
+    <div class="card-body" style="padding: 15px 20px;">
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <a href="{{ url_for('reports', type='customers') }}" class="btn {% if report_type == 'customers' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+                <i class="fa-solid fa-users"></i> Customer Report
+            </a>
+            <a href="{{ url_for('reports', type='leads') }}" class="btn {% if report_type == 'leads' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+                <i class="fa-solid fa-user-plus"></i> Lead Report
+            </a>
+            <a href="{{ url_for('reports', type='opportunities') }}" class="btn {% if report_type == 'opportunities' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+                <i class="fa-solid fa-briefcase"></i> Opportunities & Pipeline
+            </a>
+            <a href="{{ url_for('reports', type='followups') }}" class="btn {% if report_type == 'followups' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+                <i class="fa-solid fa-calendar-check"></i> Follow-Up Report
+            </a>
+            <a href="{{ url_for('reports', type='conversion') }}" class="btn {% if report_type == 'conversion' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+                <i class="fa-solid fa-arrows-turn-right"></i> Conversion Report
+            </a>
+            <a href="{{ url_for('reports', type='activities') }}" class="btn {% if report_type == 'activities' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+                <i class="fa-solid fa-list-check"></i> User Activities
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Report Toolbar: Search & CSV Export -->
+<div class="toolbar">
+    <div>
+        <h3 style="font-size: 1.15rem; color: var(--primary-blue);">
+            {{ report_title }} ({{ report_data|length }} Records)
+        </h3>
+    </div>
+    <div>
+        <a href="{{ url_for('export_csv', report_type=report_type) }}" class="btn btn-success">
+            <i class="fa-solid fa-file-csv"></i> Download CSV Export
+        </a>
+    </div>
+</div>
+
+<!-- Report Data Table -->
+<div class="card">
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        {% for col in table_columns %}
+                        <th>{{ col }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in report_data %}
+                    <tr>
+                        {% for col in table_columns %}
+                        <td>
+                            {% if col == 'Status' %}
+                                {% if row[col] in ['Active', 'Won', 'Completed', 'Converted'] %}
+                                <span class="badge badge-success">{{ row[col] }}</span>
+                                {% elif row[col] in ['Inactive', 'Lost', 'Missed', 'Cancelled'] %}
+                                <span class="badge badge-danger">{{ row[col] }}</span>
+                                {% else %}
+                                <span class="badge badge-warning">{{ row[col] }}</span>
+                                {% endif %}
+                            {% elif 'Amount' in col or 'Value' in col or 'Pipeline' in col %}
+                                <strong>${{ "{:,.2f}".format(row[col]|float) if row[col] is number else row[col] }}</strong>
+                            {% else %}
+                                {{ row[col] or '-' }}
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="{{ table_columns|length }}" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                            No data available for this report.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

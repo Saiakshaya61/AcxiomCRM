@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Audit Logs - AcxiomCRM{% endblock %}
+{% block page_title %}Security & System Audit Log (Admin Only){% endblock %}
+
+{% block content %}
+<!-- Toolbar: Filter and Export -->
+<div class="toolbar">
+    <form method="GET" action="{{ url_for('audit_logs') }}" class="search-box">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" name="search" placeholder="Search actions, user name..." value="{{ search_query }}">
+    </form>
+
+    <div class="filter-group">
+        <form method="GET" action="{{ url_for('audit_logs') }}" style="display: flex; gap: 8px;">
+            {% if search_query %}<input type="hidden" name="search" value="{{ search_query }}">{% endif %}
+            <select name="module" class="form-control" style="width: auto;" onchange="this.form.submit()">
+                <option value="">All Modules</option>
+                <option value="Auth" {% if module_filter == 'Auth' %}selected{% endif %}>Authentication</option>
+                <option value="Customer" {% if module_filter == 'Customer' %}selected{% endif %}>Customers</option>
+                <option value="Lead" {% if module_filter == 'Lead' %}selected{% endif %}>Leads</option>
+                <option value="Opportunity" {% if module_filter == 'Opportunity' %}selected{% endif %}>Opportunities</option>
+                <option value="FollowUp" {% if module_filter == 'FollowUp' %}selected{% endif %}>Follow-Ups</option>
+                <option value="User" {% if module_filter == 'User' %}selected{% endif %}>User Management</option>
+            </select>
+        </form>
+
+        <a href="{{ url_for('export_csv', report_type='audit') }}" class="btn btn-secondary btn-sm">
+            <i class="fa-solid fa-file-csv"></i> Export CSV
+        </a>
+    </div>
+</div>
+
+<!-- Audit Log Table -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fa-solid fa-clock-rotate-left" style="color: var(--accent-violet);"></i> System Activity Trail ({{ logs|length }} entries)</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>User</th>
+                        <th>Module</th>
+                        <th>Action Performed</th>
+                        <th>Record ID</th>
+                        <th>Previous State</th>
+                        <th>Updated State</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td style="white-space: nowrap; font-size: 0.82rem; color: var(--text-muted);">
+                            {{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}
+                        </td>
+                        <td>
+                            <strong>{{ log.user.name if log.user else 'System / Anonymous' }}</strong>
+                        </td>
+                        <td>
+                            <span class="badge badge-info">{{ log.module }}</span>
+                        </td>
+                        <td>
+                            {% if 'Login' in log.action %}
+                                {% if 'Failed' in log.action %}
+                                <span class="badge badge-danger"><i class="fa-solid fa-triangle-exclamation"></i> {{ log.action }}</span>
+                                {% else %}
+                                <span class="badge badge-success"><i class="fa-solid fa-shield-check"></i> {{ log.action }}</span>
+                                {% endif %}
+                            {% elif 'Deleted' in log.action %}
+                            <span class="badge badge-danger"><i class="fa-solid fa-trash"></i> {{ log.action }}</span>
+                            {% elif 'Created' in log.action or 'Converted' in log.action %}
+                            <span class="badge badge-success"><i class="fa-solid fa-plus"></i> {{ log.action }}</span>
+                            {% else %}
+                            <span class="badge badge-violet">{{ log.action }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ '#' ~ log.record_id if log.record_id else '-' }}</td>
+                        <td style="font-size: 0.82rem; color: var(--text-muted); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            {{ log.old_value or '-' }}
+                        </td>
+                        <td style="font-size: 0.82rem; color: var(--text-dark); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            {{ log.new_value or '-' }}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                            No audit log events recorded matching the criteria.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

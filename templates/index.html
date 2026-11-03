@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - AcxiomCRM{% endblock %}
+{% block page_title %}Dashboard & CRM Design Preview{% endblock %}
+
+{% block content %}
+<!-- Welcome Banner -->
+<div class="card" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; margin-bottom: 25px;">
+    <div class="card-body" style="padding: 24px;">
+        <h2 style="font-size: 1.5rem; margin-bottom: 8px; color: white;">Welcome to AcxiomCRM</h2>
+        <p style="opacity: 0.9; font-size: 0.95rem;">
+            Step 1 Complete: Clean, modern, responsive frontend layout & design shell with left sidebar, topbar, cards, and data tables.
+        </p>
+    </div>
+</div>
+
+<!-- ==============================================
+     TOP METRIC / STAT CARDS
+     ============================================== -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-info">
+            <p>Total Customers</p>
+            <h3>128</h3>
+        </div>
+        <div class="stat-icon icon-blue">
+            <i class="fa-solid fa-users"></i>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-info">
+            <p>Active Leads</p>
+            <h3>45</h3>
+        </div>
+        <div class="stat-icon icon-green">
+            <i class="fa-solid fa-user-plus"></i>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-info">
+            <p>Open Deals</p>
+            <h3>18</h3>
+        </div>
+        <div class="stat-icon icon-yellow">
+            <i class="fa-solid fa-briefcase"></i>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-info">
+            <p>Pipeline Value</p>
+            <h3>$245,000</h3>
+        </div>
+        <div class="stat-icon icon-purple">
+            <i class="fa-solid fa-sack-dollar"></i>
+        </div>
+    </div>
+</div>
+
+<!-- ==============================================
+     SAMPLE CRM DATA TABLE (Preview of Data Styling)
+     ============================================== -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fa-solid fa-table-list" style="color: var(--primary-blue); margin-right: 8px;"></i> Recent Inquiries & Leads Preview</h3>
+        <button class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-plus"></i> Add New Lead
+        </button>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Lead Name</th>
+                        <th>Company</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Status</th>
+                        <th>Assigned To</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Sarah Johnson</strong></td>
+                        <td>Apex Solutions</td>
+                        <td>sarah@apex.com</td>
+                        <td>+1 (555) 234-5678</td>
+                        <td><span class="badge badge-success">Qualified</span></td>
+                        <td>Alex Miller</td>
+                        <td>
+                            <button class="btn btn-secondary btn-sm"><i class="fa-solid fa-eye"></i> View</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>David Chen</strong></td>
+                        <td>Global Dynamics</td>
+                        <td>dchen@globaldyn.com</td>
+                        <td>+1 (555) 876-5432</td>
+                        <td><span class="badge badge-warning">Proposal Sent</span></td>
+                        <td>Jessica Brown</td>
+                        <td>
+                            <button class="btn btn-secondary btn-sm"><i class="fa-solid fa-eye"></i> View</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Elena Gomez</strong></td>
+                        <td>NextWave Media</td>
+                        <td>elena@nextwave.io</td>
+                        <td>+1 (555) 432-1098</td>
+                        <td><span class="badge badge-info">New Lead</span></td>
+                        <td>Alex Miller</td>
+                        <td>
+                            <button class="btn btn-secondary btn-sm"><i class="fa-solid fa-eye"></i> View</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}Activities - AcxiomCRM{% endblock %}
+{% block page_title %}Activity Management & Logs{% endblock %}
+
+{% block content %}
+<!-- Toolbar: Filter by Type & Log Activity -->
+<div class="toolbar">
+    <div class="filter-group">
+        <form method="GET" action="{{ url_for('activities') }}" style="display: flex; gap: 8px;">
+            <select name="type" class="form-control" style="width: auto;" onchange="this.form.submit()">
+                <option value="">All Activity Types</option>
+                <option value="Call" {% if selected_type == 'Call' %}selected{% endif %}>Phone Calls</option>
+                <option value="Meeting" {% if selected_type == 'Meeting' %}selected{% endif %}>Meetings</option>
+                <option value="Email" {% if selected_type == 'Email' %}selected{% endif %}>Emails</option>
+                <option value="Task" {% if selected_type == 'Task' %}selected{% endif %}>Tasks</option>
+            </select>
+        </form>
+    </div>
+
+    <button class="btn btn-primary" onclick="openModal('addActivityModal')">
+        <i class="fa-solid fa-plus"></i> Record Activity
+    </button>
+</div>
+
+<!-- Activities History Table -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fa-solid fa-list-check" style="color: var(--accent-violet);"></i> Activity History ({{ activities|length }})</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Activity Type</th>
+                        <th>Subject</th>
+                        <th>Description / Summary</th>
+                        <th>Associated Entity</th>
+                        <th>Logged By</th>
+                        <th style="text-align: right;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for act in activities %}
+                    <tr>
+                        <td style="white-space: nowrap; color: var(--text-muted); font-size: 0.82rem;">
+                            {{ act.created_at.strftime('%Y-%m-%d %H:%M') }}
+                        </td>
+                        <td>
+                            {% if act.activity_type == 'Call' %}<span class="badge badge-info"><i class="fa-solid fa-phone"></i> Call</span>
+                            {% elif act.activity_type == 'Meeting' %}<span class="badge badge-violet"><i class="fa-solid fa-handshake"></i> Meeting</span>
+                            {% elif act.activity_type == 'Email' %}<span class="badge badge-warning"><i class="fa-solid fa-envelope"></i> Email</span>
+                            {% else %}<span class="badge badge-success"><i class="fa-solid fa-check"></i> Task</span>{% endif %}
+                        </td>
+                        <td><strong>{{ act.subject }}</strong></td>
+                        <td>{{ act.description or '-' }}</td>
+                        <td>
+                            {% if act.related_to_type %}
+                            <span class="badge badge-info">{{ act.related_to_type }} #{{ act.related_to_id }}</span>
+                            {% else %}
+                            <span style="color: var(--text-muted);">-</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ act.user.name if act.user else 'System' }}</td>
+                        <td style="text-align: right;">
+                            <form action="{{ url_for('delete_activity', id=act.id) }}" method="POST" style="display: inline;" onsubmit="return confirmDelete('activity');">
+                                <button type="submit" class="btn btn-danger btn-sm">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                            <i class="fa-solid fa-clipboard-list" style="font-size: 2rem; display: block; margin-bottom: 8px;"></i>
+                            No activities logged. Click <strong>"Record Activity"</strong> to log interactions.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ==============================================
+     MODAL: RECORD ACTIVITY
+     ============================================== -->
+<div class="modal-overlay" id="addActivityModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-pen-nib" style="color: var(--primary-blue);"></i> Record CRM Activity</h3>
+            <button class="modal-close" onclick="closeModal('addActivityModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form action="{{ url_for('add_activity') }}" method="POST">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Activity Type <span class="required">*</span></label>
+                        <select name="activity_type" class="form-control" required>
+                            <option value="Call">Call</option>
+                            <option value="Meeting">Meeting</option>
+                            <option value="Email">Email</option>
+                            <option value="Task">Task</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Related Entity Type</label>
+                        <select name="related_to_type" id="act_related_type" class="form-control" onchange="toggleActivityEntitySelect()">
+                            <option value="">None / General</option>
+                            <option value="Customer">Customer</option>
+                            <option value="Lead">Lead</option>
+                            <option value="Opportunity">Opportunity</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group" id="act_entity_group" style="display: none;">
+                    <label class="form-label">Select Entity</label>
+                    <select name="related_to_id" id="act_entity_select" class="form-control">
+                        <!-- Populated dynamically via JS -->
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Subject / Title <span class="required">*</span></label>
+                    <input type="text" name="subject" class="form-control" placeholder="e.g. Discovery call with procurement manager" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Discussion Summary / Description</label>
+                    <textarea name="description" class="form-control" placeholder="Summary of outcomes, agreed next steps, client feedback..."></textarea>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addActivityModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Save Activity</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const customersList = {{ customers_json | tojson }};
+const leadsList = {{ leads_json | tojson }};
+const oppsList = {{ opps_json | tojson }};
+
+function toggleActivityEntitySelect() {
+    const type = document.getElementById('act_related_type').value;
+    const group = document.getElementById('act_entity_group');
+    const select = document.getElementById('act_entity_select');
+
+    select.innerHTML = '';
+    if (!type) {
+        group.style.display = 'none';
+        return;
+    }
+
+    group.style.display = 'block';
+    let data = [];
+    if (type === 'Customer') data = customersList;
+    else if (type === 'Lead') data = leadsList;
+    else if (type === 'Opportunity') data = oppsList;
+
+    data.forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item.id;
+        opt.innerText = item.name + (item.company ? ' (' + item.company + ')' : '');
+        select.appendChild(opt);
+    });
+}
+</script>
+{% endblock %}
+

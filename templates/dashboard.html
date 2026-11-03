@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - AcxiomCRM{% endblock %}
+{% block page_title %}Executive CRM Dashboard{% endblock %}
+
+{% block content %}
+<!-- Top Metrics Grid -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-info">
+            <p>Total Customers</p>
+            <h3>{{ stats.total_customers }}</h3>
+        </div>
+        <div class="stat-icon icon-blue">
+            <i class="fa-solid fa-users"></i>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-info">
+            <p>Total Leads</p>
+            <h3>{{ stats.total_leads }}</h3>
+        </div>
+        <div class="stat-icon icon-violet">
+            <i class="fa-solid fa-user-plus"></i>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-info">
+            <p>Open Leads</p>
+            <h3>{{ stats.open_leads }}</h3>
+        </div>
+        <div class="stat-icon icon-yellow">
+            <i class="fa-solid fa-bolt"></i>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-info">
+            <p>Total Deals</p>
+            <h3>{{ stats.total_opportunities }}</h3>
+        </div>
+        <div class="stat-icon icon-blue">
+            <i class="fa-solid fa-briefcase"></i>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-info">
+            <p>Won Deals</p>
+            <h3 style="color: var(--success);">{{ stats.won_opportunities }}</h3>
+        </div>
+        <div class="stat-icon icon-green">
+            <i class="fa-solid fa-trophy"></i>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-info">
+            <p>Lost Deals</p>
+            <h3 style="color: var(--danger);">{{ stats.lost_opportunities }}</h3>
+        </div>
+        <div class="stat-icon icon-red">
+            <i class="fa-solid fa-circle-xmark"></i>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-info">
+            <p>Pipeline Value</p>
+            <h3 style="color: var(--primary-blue);">${{ "{:,.0f}".format(stats.total_pipeline_value) }}</h3>
+        </div>
+        <div class="stat-icon icon-violet">
+            <i class="fa-solid fa-sack-dollar"></i>
+        </div>
+    </div>
+</div>
+
+<!-- ==============================================
+     INTERACTIVE CHART.JS CHARTS
+     ============================================== -->
+<div class="charts-grid">
+    <!-- Chart 1: Lead Status Breakdown -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fa-solid fa-chart-pie" style="color: var(--accent-violet);"></i> Lead Status Distribution</h3>
+        </div>
+        <div class="card-body">
+            <div style="height: 280px; position: relative;">
+                <canvas id="leadStatusChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 2: Opportunities Pipeline by Stage -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fa-solid fa-chart-column" style="color: var(--primary-blue);"></i> Opportunity Pipeline by Stage ($)</h3>
+        </div>
+        <div class="card-body">
+            <div style="height: 280px; position: relative;">
+                <canvas id="pipelineChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart 3: Monthly Closed Sales Trend -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fa-solid fa-arrow-trend-up" style="color: var(--success);"></i> Monthly Closed Sales Revenue Trend</h3>
+    </div>
+    <div class="card-body">
+        <div style="height: 260px; position: relative;">
+            <canvas id="monthlySalesChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Bottom Section: Recent Activities & Upcoming Follow-ups -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;">
+    <!-- Recent Activities -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fa-solid fa-clock-rotate-left" style="color: var(--accent-violet);"></i> Recent Activities</h3>
+            <a href="{{ url_for('activities') }}" class="btn btn-secondary btn-sm">View All</a>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Subject</th>
+                            <th>Logged By</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for act in recent_activities %}
+                        <tr>
+                            <td>
+                                {% if act.activity_type == 'Call' %}<span class="badge badge-info"><i class="fa-solid fa-phone"></i> Call</span>
+                                {% elif act.activity_type == 'Meeting' %}<span class="badge badge-violet"><i class="fa-solid fa-handshake"></i> Meeting</span>
+                                {% elif act.activity_type == 'Email' %}<span class="badge badge-warning"><i class="fa-solid fa-envelope"></i> Email</span>
+                                {% else %}<span class="badge badge-success"><i class="fa-solid fa-check"></i> Task</span>{% endif %}
+                            </td>
+                            <td><strong>{{ act.subject }}</strong></td>
+                            <td>{{ act.user.name if act.user else 'System' }}</td>
+                            <td style="color: var(--text-muted); font-size: 0.82rem;">{{ act.created_at.strftime('%b %d, %H:%M') }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No recent activities logged.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upcoming Follow-ups -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fa-solid fa-calendar-day" style="color: var(--primary-blue);"></i> Upcoming Follow-Ups</h3>
+            <a href="{{ url_for('followups') }}" class="btn btn-secondary btn-sm">View All</a>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Subject</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fu in upcoming_followups %}
+                        <tr>
+                            <td style="font-weight: 600;">{{ fu.follow_up_date.strftime('%Y-%m-%d') }}</td>
+                            <td><span class="badge badge-info">{{ fu.follow_up_type }}</span></td>
+                            <td>{{ fu.subject }}</td>
+                            <td>
+                                {% if fu.status == 'Planned' %}<span class="badge badge-warning">Planned</span>
+                                {% elif fu.status == 'Completed' %}<span class="badge badge-success">Completed</span>
+                                {% else %}<span class="badge badge-danger">{{ fu.status }}</span>{% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No pending follow-ups.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. Lead Status Donut Chart
+    const leadCtx = document.getElementById('leadStatusChart').getContext('2d');
+    const leadData = {{ chart_lead_status | tojson }};
+    new Chart(leadCtx, {
+        type: 'doughnut',
+        data: {
+            labels: leadData.labels,
+            datasets: [{
+                data: leadData.values,
+                backgroundColor: ['#3b82f6', '#f59e0b', '#10b981', '#7c3aed', '#ef4444'],
+                borderWidth: 2,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'right' }
+            }
+        }
+    });
+
+    // 2. Opportunities Pipeline Bar Chart
+    const pipelineCtx = document.getElementById('pipelineChart').getContext('2d');
+    const pipeData = {{ chart_pipeline_stages | tojson }};
+    new Chart(pipelineCtx, {
+        type: 'bar',
+        data: {
+            labels: pipeData.labels,
+            datasets: [{
+                label: 'Stage Total ($)',
+                data: pipeData.values,
+                backgroundColor: '#7c3aed',
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(val) { return '$' + val.toLocaleString(); }
+                    }
+                }
+            }
+        }
+    });
+
+    // 3. Monthly Closed Sales Trend Line Chart
+    const salesCtx = document.getElementById('monthlySalesChart').getContext('2d');
+    const salesData = {{ chart_monthly_sales | tojson }};
+    new Chart(salesCtx, {
+        type: 'line',
+        data: {
+            labels: salesData.labels,
+            datasets: [{
+                label: 'Won Deal Revenue ($)',
+                data: salesData.values,
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                tension: 0.3,
+                fill: true,
+                pointBackgroundColor: '#10b981',
+                pointRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(val) { return '$' + val.toLocaleString(); }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
+

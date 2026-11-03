@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% block title %}Customers - AcxiomCRM{% endblock %}
+{% block page_title %}Customer Management{% endblock %}
+
+{% block content %}
+<!-- Toolbar: Search, Filter, and Add Customer Button -->
+<div class="toolbar">
+    <form method="GET" action="{{ url_for('customers') }}" class="search-box">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" name="search" placeholder="Search by name, code, company, email..." value="{{ search_query }}">
+    </form>
+
+    <div class="filter-group">
+        <form method="GET" action="{{ url_for('customers') }}" id="filterForm" style="display: flex; gap: 8px;">
+            {% if search_query %}<input type="hidden" name="search" value="{{ search_query }}">{% endif %}
+            <select name="status" class="form-control" style="width: auto;" onchange="this.form.submit()">
+                <option value="">All Statuses</option>
+                <option value="Active" {% if status_filter == 'Active' %}selected{% endif %}>Active</option>
+                <option value="Inactive" {% if status_filter == 'Inactive' %}selected{% endif %}>Inactive</option>
+            </select>
+        </form>
+
+        <button class="btn btn-primary" onclick="openModal('addCustomerModal')">
+            <i class="fa-solid fa-user-plus"></i> Add Customer
+        </button>
+    </div>
+</div>
+
+<!-- Customer List Table -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fa-solid fa-users" style="color: var(--primary-blue);"></i> Customer Directory ({{ customers|length }})</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Customer Name</th>
+                        <th>Company</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>City / State</th>
+                        <th>Status</th>
+                        <th>Assigned To</th>
+                        <th style="text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cust in customers %}
+                    <tr>
+                        <td><span class="badge badge-violet">{{ cust.customer_code }}</span></td>
+                        <td><strong>{{ cust.name }}</strong></td>
+                        <td>{{ cust.company_name }}</td>
+                        <td>{{ cust.email }}</td>
+                        <td>{{ cust.phone }}</td>
+                        <td>{{ cust.city or '-' }}, {{ cust.state or '' }}</td>
+                        <td>
+                            {% if cust.status == 'Active' %}
+                            <span class="badge badge-success">Active</span>
+                            {% else %}
+                            <span class="badge badge-danger">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ cust.assigned_user.name if cust.assigned_user else 'Unassigned' }}</td>
+                        <td style="text-align: right; white-space: nowrap;">
+                            <button class="btn btn-secondary btn-sm" onclick="openEditModal({{ cust.id }}, '{{ cust.name|escape }}', '{{ cust.company_name|escape }}', '{{ cust.email|escape }}', '{{ cust.phone|escape }}', '{{ cust.address|escape }}', '{{ cust.city|escape }}', '{{ cust.state|escape }}', '{{ cust.status }}', '{{ cust.assigned_user_id or '' }}')">
+                                <i class="fa-solid fa-pen-to-square"></i> Edit
+                            </button>
+                            <form action="{{ url_for('delete_customer', id=cust.id) }}" method="POST" style="display: inline;" onsubmit="return confirmDelete('customer');">
+                                <button type="submit" class="btn btn-danger btn-sm">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="9" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                            <i class="fa-solid fa-inbox" style="font-size: 2rem; display: block; margin-bottom: 8px;"></i>
+                            No customers found. Click <strong>"Add Customer"</strong> to create your first client.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ==============================================
+     MODAL 1: ADD NEW CUSTOMER
+     ============================================== -->
+<div class="modal-overlay" id="addCustomerModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-user-plus" style="color: var(--primary-blue);"></i> Add New Customer</h3>
+            <button class="modal-close" onclick="closeModal('addCustomerModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form action="{{ url_for('add_customer') }}" method="POST">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Full Name <span class="required">*</span></label>
+                        <input type="text" name="name" class="form-control" required placeholder="e.g. John Doe">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Company Name <span class="required">*</span></label>
+                        <input type="text" name="company_name" class="form-control" required placeholder="e.g. Acme Corp">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email Address <span class="required">*</span></label>
+                        <input type="email" name="email" class="form-control" required placeholder="john@acme.com">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Phone Number <span class="required">*</span></label>
+                        <input type="tel" name="phone" class="form-control" required placeholder="+1 (555) 123-4567">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">City</label>
+                        <input type="text" name="city" class="form-control" placeholder="New York">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">State</label>
+                        <input type="text" name="state" class="form-control" placeholder="NY">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Status <span class="required">*</span></label>
+                        <select name="status" class="form-control" required>
+                            <option value="Active" selected>Active</option>
+                            <option value="Inactive">Inactive</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Assign Representative</label>
+                        <select name="assigned_user_id" class="form-control">
+                            <option value="">Unassigned</option>
+                            {% for u in users %}
+                            <option value="{{ u.id }}">{{ u.name }} ({{ u.role.name }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Street Address</label>
+                    <textarea name="address" class="form-control" placeholder="123 Business Avenue, Suite 400"></textarea>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addCustomerModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Save Customer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ==============================================
+     MODAL 2: EDIT CUSTOMER
+     ============================================== -->
+<div class="modal-overlay" id="editCustomerModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-pen-to-square" style="color: var(--accent-violet);"></i> Edit Customer</h3>
+            <button class="modal-close" onclick="closeModal('editCustomerModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="editCustomerForm" method="POST">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Full Name <span class="required">*</span></label>
+                        <input type="text" id="edit_name" name="name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Company Name <span class="required">*</span></label>
+                        <input type="text" id="edit_company_name" name="company_name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email Address <span class="required">*</span></label>
+                        <input type="email" id="edit_email" name="email" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Phone Number <span class="required">*</span></label>
+                        <input type="tel" id="edit_phone" name="phone" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">City</label>
+                        <input type="text" id="edit_city" name="city" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">State</label>
+                        <input type="text" id="edit_state" name="state" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Status <span class="required">*</span></label>
+                        <select id="edit_status" name="status" class="form-control" required>
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Assign Representative</label>
+                        <select id="edit_assigned_user_id" name="assigned_user_id" class="form-control">
+                            <option value="">Unassigned</option>
+                            {% for u in users %}
+                            <option value="{{ u.id }}">{{ u.name }} ({{ u.role.name }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Street Address</label>
+                    <textarea id="edit_address" name="address" class="form-control"></textarea>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editCustomerModal')">Cancel</button>
+                    <button type="submit" class="btn btn-violet"><i class="fa-solid fa-check"></i> Update Customer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openEditModal(id, name, company, email, phone, address, city, state, status, assignedUserId) {
+    document.getElementById('editCustomerForm').action = "/customers/edit/" + id;
+    document.getElementById('edit_name').value = name;
+    document.getElementById('edit_company_name').value = company;
+    document.getElementById('edit_email').value = email;
+    document.getElementById('edit_phone').value = phone;
+    document.getElementById('edit_address').value = address;
+    document.getElementById('edit_city').value = city;
+    document.getElementById('edit_state').value = state;
+    document.getElementById('edit_status').value = status;
+    document.getElementById('edit_assigned_user_id').value = assignedUserId || '';
+    openModal('editCustomerModal');
+}
+</script>
+{% endblock %}
+

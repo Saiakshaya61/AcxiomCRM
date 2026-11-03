@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AcxiomCRM - Customer Relationship Management{% endblock %}</title>
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Chart.js for Dashboard Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- AcxiomCRM Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+    <!-- ==============================================
+         LEFT SIDEBAR NAVIGATION
+         ============================================== -->
+    <aside class="sidebar">
+        <!-- Logo / Brand -->
+        <div class="sidebar-brand">
+            <span class="logo-icon"><i class="fa-solid fa-chart-pie"></i></span>
+            <span>AcxiomCRM</span>
+        </div>
+
+        <!-- Navigation Links -->
+        <ul class="sidebar-menu">
+            <li>
+                <a href="{{ url_for('dashboard') }}" class="{% if request.endpoint == 'dashboard' %}active{% endif %}">
+                    <span class="menu-icon"><i class="fa-solid fa-gauge-high"></i></span>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('customers') }}" class="{% if request.endpoint == 'customers' %}active{% endif %}">
+                    <span class="menu-icon"><i class="fa-solid fa-users"></i></span>
+                    <span>Customers</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('leads') }}" class="{% if request.endpoint == 'leads' %}active{% endif %}">
+                    <span class="menu-icon"><i class="fa-solid fa-user-plus"></i></span>
+                    <span>Leads</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('opportunities') }}" class="{% if request.endpoint == 'opportunities' %}active{% endif %}">
+                    <span class="menu-icon"><i class="fa-solid fa-briefcase"></i></span>
+                    <span>Opportunities</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('followups') }}" class="{% if request.endpoint == 'followups' %}active{% endif %}">
+                    <span class="menu-icon"><i class="fa-solid fa-calendar-check"></i></span>
+                    <span>Follow-Ups</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('activities') }}" class="{% if request.endpoint == 'activities' %}active{% endif %}">
+                    <span class="menu-icon"><i class="fa-solid fa-list-check"></i></span>
+                    <span>Activities</span>
+                </a>
+            </li>
+
+            <!-- Admin-Only Modules -->
+            {% if session.get('user_role') == 'Admin' %}
+            <li>
+                <a href="{{ url_for('users') }}" class="{% if request.endpoint == 'users' %}active{% endif %}">
+                    <span class="menu-icon"><i class="fa-solid fa-user-gear"></i></span>
+                    <span>User & Roles</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('audit_logs') }}" class="{% if request.endpoint == 'audit_logs' %}active{% endif %}">
+                    <span class="menu-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
+                    <span>Audit Log</span>
+                </a>
+            </li>
+            {% endif %}
+
+            <li>
+                <a href="{{ url_for('reports') }}" class="{% if request.endpoint == 'reports' %}active{% endif %}">
+                    <span class="menu-icon"><i class="fa-solid fa-file-invoice"></i></span>
+                    <span>Reports</span>
+                </a>
+            </li>
+        </ul>
+
+        <!-- Sidebar Footer -->
+        <div class="sidebar-footer">
+            <span><i class="fa-solid fa-shield-halved"></i> AcxiomCRM v1.0</span>
+            <span class="badge badge-violet">{{ session.get('user_role', 'Guest') }}</span>
+        </div>
+    </aside>
+
+    <!-- ==============================================
+         MAIN CONTENT WRAPPER
+         ============================================== -->
+    <div class="main-wrapper">
+        <!-- Top Navigation Bar -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="mobile-toggle" id="sidebarToggle" title="Toggle Navigation">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <h1 class="page-title">{% block page_title %}Overview{% endblock %}</h1>
+            </div>
+
+            <div class="topbar-right">
+                {% if session.get('user_id') %}
+                <div class="user-profile-badge">
+                    <div class="user-avatar">
+                        {{ session.get('user_name', 'U')[0] | upper }}
+                    </div>
+                    <div class="user-info">
+                        <div class="user-name">{{ session.get('user_name', 'User') }}</div>
+                        <span class="user-role-badge">{{ session.get('user_role', 'Sales Executive') }}</span>
+                    </div>
+                </div>
+                <a href="{{ url_for('logout') }}" class="btn btn-secondary btn-sm" title="Log Out">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i> Logout
+                </a>
+                {% else %}
+                <a href="{{ url_for('login') }}" class="btn btn-primary btn-sm">Login</a>
+                <a href="{{ url_for('register') }}" class="btn btn-secondary btn-sm">Register</a>
+                {% endif %}
+            </div>
+        </header>
+
+        <!-- Flash Alert Messages -->
+        <main class="page-content">
+            <div class="flash-container">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }}">
+                                <span><i class="fa-solid fa-circle-info"></i> {{ message }}</span>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+            </div>
+
+            <!-- Main Page Content Block -->
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- Main JavaScript -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

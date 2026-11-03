@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block title %}Follow-Ups - AcxiomCRM{% endblock %}
+{% block page_title %}Follow-Up Management{% endblock %}
+
+{% block content %}
+<!-- Quick Tab Filter & Schedule Button -->
+<div class="toolbar">
+    <div class="filter-group">
+        <a href="{{ url_for('followups') }}" class="btn {% if not current_tab %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+            All ({{ counts.all }})
+        </a>
+        <a href="{{ url_for('followups', tab='pending') }}" class="btn {% if current_tab == 'pending' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+            <i class="fa-solid fa-clock"></i> Pending ({{ counts.pending }})
+        </a>
+        <a href="{{ url_for('followups', tab='overdue') }}" class="btn {% if current_tab == 'overdue' %}btn-danger{% else %}btn-secondary{% endif %} btn-sm">
+            <i class="fa-solid fa-triangle-exclamation"></i> Overdue ({{ counts.overdue }})
+        </a>
+        <a href="{{ url_for('followups', tab='completed') }}" class="btn {% if current_tab == 'completed' %}btn-success{% else %}btn-secondary{% endif %} btn-sm">
+            <i class="fa-solid fa-circle-check"></i> Completed ({{ counts.completed }})
+        </a>
+    </div>
+
+    <button class="btn btn-violet" onclick="openModal('addFollowUpModal')">
+        <i class="fa-solid fa-calendar-plus"></i> Schedule Follow-Up
+    </button>
+</div>
+
+<!-- Follow-ups List Table -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fa-solid fa-calendar-check" style="color: var(--primary-blue);"></i> Scheduled Follow-Ups</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Subject & Notes</th>
+                        <th>Associated Entity</th>
+                        <th>Assigned Rep</th>
+                        <th>Status</th>
+                        <th style="text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fu in followups %}
+                    <tr>
+                        <td style="white-space: nowrap;">
+                            <strong>{{ fu.follow_up_date.strftime('%Y-%m-%d') }}</strong>
+                            {% if fu.status == 'Planned' and fu.follow_up_date < today %}
+                            <span class="badge badge-danger" style="margin-left: 4px;">Overdue</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if fu.follow_up_type == 'Call' %}<span class="badge badge-info"><i class="fa-solid fa-phone"></i> Call</span>
+                            {% elif fu.follow_up_type == 'Meeting' %}<span class="badge badge-violet"><i class="fa-solid fa-handshake"></i> Meeting</span>
+                            {% elif fu.follow_up_type == 'Email' %}<span class="badge badge-warning"><i class="fa-solid fa-envelope"></i> Email</span>
+                            {% else %}<span class="badge badge-success"><i class="fa-solid fa-list-check"></i> Task</span>{% endif %}
+                        </td>
+                        <td>
+                            <div><strong>{{ fu.subject }}</strong></div>
+                            {% if fu.notes %}<div style="font-size: 0.82rem; color: var(--text-muted);">{{ fu.notes }}</div>{% endif %}
+                        </td>
+                        <td>
+                            <span class="badge badge-info">{{ fu.related_to_type }} #{{ fu.related_to_id }}</span>
+                        </td>
+                        <td>{{ fu.assigned_user.name if fu.assigned_user else 'Unassigned' }}</td>
+                        <td>
+                            {% if fu.status == 'Planned' %}<span class="badge badge-warning">Planned</span>
+                            {% elif fu.status == 'Completed' %}<span class="badge badge-success"><i class="fa-solid fa-check"></i> Completed</span>
+                            {% elif fu.status == 'Missed' %}<span class="badge badge-danger">Missed</span>
+                            {% else %}<span class="badge badge-danger">Cancelled</span>{% endif %}
+                        </td>
+                        <td style="text-align: right; white-space: nowrap;">
+                            {% if fu.status == 'Planned' %}
+                            <form action="{{ url_for('complete_followup', id=fu.id) }}" method="POST" style="display: inline;">
+                                <button type="submit" class="btn btn-success btn-sm" title="Mark as Completed">
+                                    <i class="fa-solid fa-check"></i> Done
+                                </button>
+                            </form>
+                            <button class="btn btn-secondary btn-sm" onclick="openRescheduleModal({{ fu.id }}, '{{ fu.follow_up_date.strftime('%Y-%m-%d') }}', '{{ fu.subject|escape }}')">
+                                <i class="fa-solid fa-arrows-rotate"></i>
+                            </button>
+                            {% endif %}
+                            <form action="{{ url_for('delete_followup', id=fu.id) }}" method="POST" style="display: inline;" onsubmit="return confirmDelete('follow-up');">
+                                <button type="submit" class="btn btn-danger btn-sm">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                            <i class="fa-solid fa-calendar-xmark" style="font-size: 2rem; display: block; margin-bottom: 8px;"></i>
+                            No follow-ups found in this view.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ==============================================
+     MODAL 1: SCHEDULE FOLLOW-UP
+     ============================================== -->
+<div class="modal-overlay" id="addFollowUpModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-calendar-plus" style="color: var(--accent-violet);"></i> Schedule Follow-Up</h3>
+            <button class="modal-close" onclick="closeModal('addFollowUpModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form action="{{ url_for('add_followup') }}" method="POST">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Related Entity Type <span class="required">*</span></label>
+                        <select name="related_to_type" id="fu_related_type" class="form-control" required onchange="toggleEntitySelect()">
+                            <option value="Customer">Customer</option>
+                            <option value="Lead">Lead</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Select Entity <span class="required">*</span></label>
+                        <select name="related_to_id" id="fu_customer_select" class="form-control">
+                            {% for c in customers %}
+                            <option value="{{ c.id }}">{{ c.name }} ({{ c.company_name }})</option>
+                            {% endfor %}
+                        </select>
+                        <select id="fu_lead_select" class="form-control" style="display: none;">
+                            {% for l in leads %}
+                            <option value="{{ l.id }}">{{ l.name }} ({{ l.company_name }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Follow-Up Date <span class="required">*</span></label>
+                        <input type="date" name="follow_up_date" class="form-control" min="{{ today.strftime('%Y-%m-%d') }}" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Follow-Up Type <span class="required">*</span></label>
+                        <select name="follow_up_type" class="form-control" required>
+                            <option value="Call">Call</option>
+                            <option value="Meeting">Meeting</option>
+                            <option value="Email">Email</option>
+                            <option value="Task">Task</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Subject / Purpose <span class="required">*</span></label>
+                    <input type="text" name="subject" class="form-control" placeholder="e.g. Discuss quarterly license renewal" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Notes & Agenda</label>
+                    <textarea name="notes" class="form-control" placeholder="Add any details or preparation notes..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Assign To</label>
+                    <select name="assigned_user_id" class="form-control">
+                        <option value="">Unassigned</option>
+                        {% for u in users %}
+                        <option value="{{ u.id }}">{{ u.name }} ({{ u.role.name }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addFollowUpModal')">Cancel</button>
+                    <button type="submit" class="btn btn-violet"><i class="fa-solid fa-check"></i> Save Schedule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ==============================================
+     MODAL 2: RESCHEDULE FOLLOW-UP
+     ============================================== -->
+<div class="modal-overlay" id="rescheduleModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-arrows-rotate" style="color: var(--primary-blue);"></i> Reschedule Follow-Up</h3>
+            <button class="modal-close" onclick="closeModal('rescheduleModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="rescheduleForm" method="POST">
+                <p id="rescheduleSubject" style="margin-bottom: 15px; font-weight: 600;"></p>
+                <div class="form-group">
+                    <label class="form-label">New Follow-Up Date <span class="required">*</span></label>
+                    <input type="date" id="reschedule_date" name="follow_up_date" class="form-control" min="{{ today.strftime('%Y-%m-%d') }}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Rescheduling Reason / Notes</label>
+                    <textarea name="notes" class="form-control" placeholder="Client requested to postpone to next week..."></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('rescheduleModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Save New Date</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleEntitySelect() {
+    const type = document.getElementById('fu_related_type').value;
+    const custSelect = document.getElementById('fu_customer_select');
+    const leadSelect = document.getElementById('fu_lead_select');
+    if (type === 'Customer') {
+        custSelect.style.display = 'block';
+        custSelect.name = 'related_to_id';
+        leadSelect.style.display = 'none';
+        leadSelect.name = '';
+    } else {
+        custSelect.style.display = 'none';
+        custSelect.name = '';
+        leadSelect.style.display = 'block';
+        leadSelect.name = 'related_to_id';
+    }
+}
+
+function openRescheduleModal(id, currentDate, subject) {
+    document.getElementById('rescheduleForm').action = "/followups/reschedule/" + id;
+    document.getElementById('rescheduleSubject').innerText = "Rescheduling: " + subject;
+    document.getElementById('reschedule_date').value = currentDate;
+    openModal('rescheduleModal');
+}
+</script>
+{% endblock %}
+
